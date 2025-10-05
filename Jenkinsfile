@@ -13,30 +13,34 @@ pipeline {
             }
         }
         
-        stage('Terraform with AWS') {
+        stage('Terraform Init') {
             steps {
-                withAWS(credentials: 'aws-terraform-creds', region: 'ap-southeast-1') {  // Use your ID & region here
-                    stage('Terraform Init') {
-                        steps {
-                            sh 'terraform init -backend-config="bucket=your-tf-state-bucket" -backend-config="key=${ENV}/terraform.tfstate"'
-                        }
+                script {
+                    withAWS(credentials: 'aws-terraform-creds', region: 'us-east-1') {  // Your ID & region
+                        sh 'terraform init -backend-config="bucket=your-tf-state-bucket" -backend-config="key=${ENV}/terraform.tfstate"'
                     }
-                    
-                    stage('Terraform Plan') {
-                        steps {
-                            sh 'terraform plan -var="environment=${ENV}" -out=tfplan'
-                        }
+                }
+            }
+        }
+        
+        stage('Terraform Plan') {
+            steps {
+                script {
+                    withAWS(credentials: 'aws-terraform-creds', region: 'us-east-1') {
+                        sh 'terraform plan -var="environment=${ENV}" -out=tfplan'
                     }
-                    
-                    stage('Terraform Action') {
-                        steps {
-                            script {
-                                if (params.ACTION == 'apply') {
-                                    sh 'terraform apply -auto-approve tfplan'
-                                } else {
-                                    sh 'terraform destroy -auto-approve -var="environment=${ENV}"'
-                                }
-                            }
+                }
+            }
+        }
+        
+        stage('Terraform Action') {
+            steps {
+                script {
+                    withAWS(credentials: 'aws-terraform-creds', region: 'us-east-1') {
+                        if (params.ACTION == 'apply') {
+                            sh 'terraform apply -auto-approve tfplan'
+                        } else {
+                            sh 'terraform destroy -auto-approve -var="environment=${ENV}"'
                         }
                     }
                 }
