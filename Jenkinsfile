@@ -6,11 +6,6 @@ pipeline {
         string(name: 'ENV', defaultValue: 'dev', description: 'Environment (dev/prod)')
     }
     
-    environment {
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key')  // Example for AWS
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-    }
-    
     stages {
         stage('Checkout') {
             steps {
@@ -18,25 +13,31 @@ pipeline {
             }
         }
         
-        stage('Terraform Init') {
+        stage('Terraform with AWS') {
             steps {
-                sh 'terraform init -backend-config="bucket=your-tf-state-bucket" -backend-config="key=${ENV}/terraform.tfstate"'
-            }
-        }
-        
-        stage('Terraform Plan') {
-            steps {
-                sh 'terraform plan -var="environment=${ENV}" -out=tfplan'
-            }
-        }
-        
-        stage('Terraform Action') {
-            steps {
-                script {
-                    if (params.ACTION == 'apply') {
-                        sh 'terraform apply -auto-approve tfplan'
-                    } else {
-                        sh 'terraform destroy -auto-approve -var="environment=${ENV}"'
+                withAWS(credentials: 'aws-terraform-creds', region: 'ap-southeast-1') {  // Use your ID & region here
+                    stage('Terraform Init') {
+                        steps {
+                            sh 'terraform init -backend-config="bucket=your-tf-state-bucket" -backend-config="key=${ENV}/terraform.tfstate"'
+                        }
+                    }
+                    
+                    stage('Terraform Plan') {
+                        steps {
+                            sh 'terraform plan -var="environment=${ENV}" -out=tfplan'
+                        }
+                    }
+                    
+                    stage('Terraform Action') {
+                        steps {
+                            script {
+                                if (params.ACTION == 'apply') {
+                                    sh 'terraform apply -auto-approve tfplan'
+                                } else {
+                                    sh 'terraform destroy -auto-approve -var="environment=${ENV}"'
+                                }
+                            }
+                        }
                     }
                 }
             }
