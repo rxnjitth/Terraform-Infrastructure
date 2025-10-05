@@ -1,9 +1,13 @@
 pipeline {
     agent any
     
+    triggers {
+        githubPush() // Automatically trigger on Git push
+    }
+    
     parameters {
         choice(name: 'ACTION', choices: ['apply', 'destroy'], description: 'Apply or Destroy infrastructure')
-        
+        choice(name: 'ENV', choices: ['dev', 'prod', 'test'], defaultValue: 'dev', description: 'Choose environment')
     }
     
     stages {
@@ -38,10 +42,10 @@ pipeline {
     
     post {
         success {
-            echo "Success: ${params.ACTION} completed!"
+            echo "Success: ${params.ACTION} completed for environment ${params.ENV}!"
         }
         failure {
-            echo "Failed: ${params.ACTION} failed!"
+            echo "Failed: ${params.ACTION} failed for environment ${params.ENV}!"
         }
     }
 }
